@@ -25,6 +25,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 
 import io.delta.standalone.DeltaLog;
+import io.delta.standalone.CommitResult;
 import io.delta.standalone.actions.AddFile;
 import io.delta.standalone.Operation;
 import io.delta.standalone.OptimisticTransaction;
@@ -85,13 +86,19 @@ public class HelloWorld {
                     .partitionColumns(partitionColumns)
                     .build();
 
+            if(!log.tableExists()){
+                CommitResult commitResult = log.startTransaction().commit(
+                        Collections.singletonList(metadata),
+                        new Operation(Operation.Name.CREATE_TABLE),
+                        engineInfo
+                );
+                System.out.println(String.format("Committed version %d", commitResult.getVersion()));
+            }
+
             Operation op = new Operation(Operation.Name.WRITE);
 
-            for (int i = 0; i < 15; i++) {
+            for (int i = 1; i < 16; i++) {
                 OptimisticTransaction txn = log.startTransaction();
-                if (i == 0) {
-                    txn.updateMetadata(metadata);
-                }
 
                 Map<String, String> partitionValues = new HashMap<>();
                 partitionValues.put("foo", Integer.toString(i % 3));
@@ -114,7 +121,7 @@ public class HelloWorld {
                     .map(addFile -> Integer.parseInt(addFile.getPath()))
                     .collect(Collectors.toSet());
 
-            for (int i = 0; i < 15; i++) {
+            for (int i = 1; i < 16; i++) {
                 if (!pathVals.contains(i)) throw new RuntimeException();
                 System.out.println(String.format("Read version %d", i));
             }
